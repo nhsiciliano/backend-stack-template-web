@@ -1,0 +1,45 @@
+# CodeRabbit configuration
+# Reference: https://docs.coderabbit.ai/guides/configure-coderabbit
+#
+# CodeRabbit is an external GitHub App for AI code review. It runs on PRs
+# once the app is installed on this repository. There is no in-app runtime
+# integration — this file only customises the review behaviour.
+#
+# Install / setup:
+#   1. Install the app: https://github.com/apps/coderabbitai
+#   2. Grant access to this repository.
+#   3. Open a PR — CodeRabbit reviews it automatically.
+
+language: en-US
+early_access: false
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+  path_instructions:
+    - path: "src/server/**"
+      instructions: |
+        Server-side code running on Cloudflare Workers. Flag:
+        - Node-only APIs (fs, child_process) — Workers don't support them.
+        - Unvalidated inputs in createServerFn handlers.
+        - Long-lived in-memory state assumed to persist between requests.
+    - path: "src/routes/**"
+      instructions: |
+        TanStack Router file routes. Check that:
+        - Search params use validateSearch with Zod schemas.
+        - Loaders use ensureQueryData (not raw fetch) for SSR + Query parity.
+        - Mutations invalidate the right inventoryKeys.
+    - path: "src/lib/inventory/schemas.ts"
+      instructions: |
+        Zod schemas are the source of truth for both server input validation
+        and client-side form validation. Treat changes as breaking.
+chat:
+  auto_reply: true
