@@ -1,104 +1,102 @@
-# Backend Stack Template Web
+# Stockwise
 
-Landing web para presentar `backend-stack-template` como un servicio/producto: un repositorio base para crear, lanzar y escalar backends SaaS de manera rápida, consistente y production-ready.
+Production-ready inventory and stock management web app built on the TanStack ecosystem and deployed to Cloudflare Workers.
 
-La web está construida con React + Vite y comunica el valor del template backend: ahorrar setup repetitivo, partir de una arquitectura probada y acelerar la creación de APIs con infraestructura seria desde el primer commit.
+End-to-end type safety from server functions to React Query to forms, with Zod as the single source of truth for input validation.
 
-## Relación con `backend-stack-template`
+## Stack
 
-Esta app no contiene el backend. Su objetivo es vender, explicar y dirigir tráfico hacia el repositorio principal:
+- TanStack Start (React 19, SSR, file-based routing, server functions)
+- TanStack Router + TanStack Query (SSR-hydrated cache)
+- Zod (input validation, server + client)
+- Tailwind CSS v4
+- Cloudflare Workers (Wrangler) for deployment
+- Lucide React icons
 
-https://github.com/nhsiciliano/backend-stack-template
+## Features
 
-El repositorio ofrecido incluye una base para construir backends con:
+- **Dashboard** with KPIs (product count, total units, inventory value, reorder count), low-stock list, and recent movements.
+- **Products** list with URL-driven search, low/out filters, create modal, and per-product detail page.
+- **Per-product** edit, delete, stock-adjust panel (in / out / adjust) and full movement history.
+- **Stock movements** global audit trail.
+- **Suppliers** list with inline create.
+- Server-side stock invariants (no negative stock; atomic product + movement updates).
 
-- Fastify 5 + TypeScript
-- PostgreSQL + Prisma
-- Redis + BullMQ
-- Better Auth
-- OpenAPI / Swagger UI
-- API y worker como procesos separados
-- Docker Compose para desarrollo local
-- Guías de DX, seguridad, CI y deployment
+## Scaffold
 
-## Objetivo del sitio
+This project was scaffolded with:
 
-La landing está pensada para founders, agencias y developers que necesitan validar o lanzar productos SaaS sin reconstruir siempre la misma infraestructura backend.
+```bash
+npx @tanstack/cli@latest create my-tanstack-app --agent --deployment cloudflare --add-ons tanstack-query
+```
 
-El mensaje central es:
+…then enhanced with TanStack Intent guidance:
 
-> Empieza por tu dominio de negocio, no por el plumbing.
+```bash
+npx @tanstack/intent@latest install
+npx @tanstack/intent@latest list
+```
 
-## Stack de esta web
+The TanStack CLI scaffold is preserved as-is; inventory domain code (`src/server`, `src/lib/inventory`, `src/routes/products.*`, `src/routes/movements.tsx`, `src/routes/suppliers.tsx`, `src/components/inventory`) was added on top.
 
-- React
-- Vite
-- TypeScript
-- Tailwind CSS
-- Wouter
-- Lucide React
-
-## Desarrollo local
-
-Instalar dependencias:
+## Local development
 
 ```bash
 npm install
+npm run dev      # http://localhost:3000
 ```
 
-Levantar el servidor de desarrollo:
+`routeTree.gen.ts` is generated automatically by the TanStack Router Vite plugin on first dev/build.
 
-```bash
-npm run dev
-```
-
-Generar build de producción:
+## Build & deploy
 
 ```bash
 npm run build
+npm run deploy   # vite build && wrangler deploy
 ```
 
-Previsualizar el build:
+Cloudflare config lives in `wrangler.jsonc`. Authenticate with `wrangler login` or set `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` in CI.
 
-```bash
-npm run preview
+## Environment
+
+The demo runs with zero environment variables — the data store is an in-memory map seeded on first request. **It is not durable across Worker isolate evictions.**
+
+For real deployments, replace `src/server/store.ts` with a Cloudflare binding:
+
+- **D1** (SQL) — preferred for relational + audit trail.
+- **KV** — simple key/value, eventually consistent.
+- **Durable Objects** — strong consistency for stock counts.
+
+Add the binding in `wrangler.jsonc` and keep all secrets server-side. Only `VITE_*` env vars reach the client.
+
+## Project layout
+
 ```
-
-## Estructura principal
-
-```text
 src/
-  App.tsx
-  main.tsx
-  index.css
-  components/
-    ErrorBoundary.tsx
-  pages/
-    Home.tsx
-    NotFound.tsx
+  routes/         # /, /products, /products/$id, /movements, /suppliers
+  server/         # createServerFn handlers + store
+  lib/inventory/  # Zod schemas, types, query factories
+  components/     # Layout + inventory UI primitives
 ```
 
-## Dirección UX/UI
+## Code review — CodeRabbit
 
-La interfaz usa una estética de operations console: oscura, sobria y técnica, con acentos cian/verde para acciones y señales de sistema. La intención es conectar visualmente con infraestructura, despliegues, workers, bases de datos y APIs sin caer en una estética hacker genérica.
+PR reviews are handled by **CodeRabbit** as repository tooling (no in-app SDK). Configuration lives in [`.coderabbit.yaml`](./.coderabbit.yaml) with path-scoped instructions for `src/server`, `src/routes`, and shared Zod schemas.
 
-Principios aplicados:
+Setup:
 
-- Jerarquía clara para entender el valor en pocos segundos.
-- CTA directos hacia GitHub y documentación del template.
-- Quick start visible para mostrar baja fricción.
-- Arquitectura resumida en una línea de despliegue.
-- Accesibilidad básica: foco visible, etiquetas ARIA y soporte para `prefers-reduced-motion`.
+1. Install https://github.com/apps/coderabbitai on the org / repo.
+2. Open a PR against `main` — CodeRabbit reviews it automatically.
 
-## Mantenimiento del contenido
+## Hosting — Cloudflare
 
-Cuando el repositorio `backend-stack-template` cambie, revisar especialmente:
+Cloudflare Workers is the deployment target. Configuration:
 
-- Comandos de quick start en `src/pages/Home.tsx`.
-- Features del stack.
-- Enlaces a documentación en GitHub.
-- Metadata SEO en `index.html`.
+- `wrangler.jsonc` — entry point `@tanstack/react-start/server-entry`, `nodejs_compat` flag.
+- `vite.config.ts` — `@cloudflare/vite-plugin` wired alongside `tanstackStart()`.
 
-## Propósito comercial
+The full deployment story (D1 binding, custom domain, secrets) is handled in the Cloudflare dashboard / `wrangler` CLI — it depends on your account, so it is not pre-baked in this repo.
 
-Esta web funciona como la capa de presentación del servicio. El valor ofrecido no es solo el código del template, sino la capacidad de empezar nuevos backends con una base escalable, documentada y alineada con prácticas de producción.
+## Further docs
+
+See [`AGENTS.md`](./AGENTS.md) for architectural decisions, data-layer migration notes, gotchas, and the next-steps backlog.
